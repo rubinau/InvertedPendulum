@@ -140,7 +140,7 @@ float getXPositionCm() {
 
     return x_pos;
 }
-2
+
 float deg2rad(float deg) {
   return deg * 3.14159265358979323846f / 180.0f;
 }
@@ -175,10 +175,10 @@ const float C_mat[2][4] = {
    STATE FEEDBACK GAIN K (FROM YOUR MATLAB pole placement)
    ------------------------------------------------------------ */
 float K[4] = {
-  -12.8173f,
-  -8.6306f,
-  26.3499f,    
-  5.0342f
+  -2.4202f,
+  -6.7904f,
+  32.9900f,    
+  7.0016f
 };
 
 /* ------------------------------------------------------------
@@ -215,6 +215,9 @@ void setMotor(float u_norm)
 
     int dir = (u_norm >= 0.0f) ? HIGH : LOW;
     float duty = fabs(u_norm);
+    if (duty <= 0.55 && duty != 0){
+      duty = 0.55;
+    }
     
     if(dir == HIGH){
       ledcWrite(PIN_PWM_A, 0);
@@ -317,10 +320,10 @@ for(int i = 0; i < 4; i++)
   u -= K[i] * state[i];
 
 /* scale for motor */
-if (x > 0.13f)    u -= 5.0f*(x - 0.13);
-if (x < -0.13f)   u -= 5.0f*(x + 0.13f);
+// if (x > 0.13f)    u -= 5.0f*(x - 0.13);
+// if (x < -0.13f)   u -= 5.0f*(x + 0.13f);
 
-float u_norm = u * 0.4f;
+float u_norm = u * 0.75f;
 
 // store PREVIOUS CONTROL INPUT = u , NOT pwm!
 u_prev = u;
