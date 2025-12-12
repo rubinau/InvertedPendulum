@@ -14,10 +14,10 @@
 // =========================================================
 // 1. KONFIGURASI ENCODER SUDUT (THETA) - PCNT UNIT 0
 // =========================================================
-#define ENC_THETA_A_GPIO 21       // Pin A Encoder Sudut
-#define ENC_THETA_B_GPIO 22       // Pin B Encoder Sudut
-#define PIN_PWM_A 18  // Input A L298N
-#define PIN_PWM_B 19  // Input B L298N
+#define ENC_THETA_A_GPIO 32       // Pin A Encoder Sudut
+#define ENC_THETA_B_GPIO 33       // Pin B Encoder Sudut
+#define PIN_PWM_A 22  // Input A L298N
+#define PIN_PWM_B 23  // Input B L298N
 #define PCNT_THETA_UNIT  PCNT_UNIT_0 // Menggunakan Unit 0
 
 // Konfigurasi Parameter PWM
@@ -171,25 +171,17 @@ const float C_mat[2][4] = {
   {0.0f, 0.0f, 1.0f, 0.0f}    // phi
 };
 
-/* ------------------------------------------------------------
-   STATE FEEDBACK GAIN K (FROM YOUR MATLAB pole placement)
-   ------------------------------------------------------------ */
-float K[4] = {
-  -2.4202f,
-  -6.7904f,
-  32.9900f,    
-  7.0016f
+
+float K[4] = { -38.46398f, -27.55161f, 97.14464f, 8.70459f };
+
+
+float L[4][2] = {
+  { 0.29955f, -0.00838f },
+  { 4.38213f, -0.24203f },
+  { -0.02537f, 0.30668f },
+  { -1.23905f, 5.00168f }
 };
 
-/* ------------------------------------------------------------
-   OBSERVER GAIN L (FROM MATLAB place(A',C',obs_poles)')
-   ------------------------------------------------------------ */
-float L[4][2] = {
-  { 0.0752f, -0.0154f },
-  { 0.1661f, -0.1093f },
-  { -0.0218f, 0.1111f },
-  { -0.2340f, 0.6564f }
-};
 
 /* ------------------------------------------------------------
    GLOBAL VARIABLES
@@ -215,9 +207,9 @@ void setMotor(float u_norm)
 
     int dir = (u_norm >= 0.0f) ? HIGH : LOW;
     float duty = fabs(u_norm);
-    if (duty <= 0.55 && duty != 0){
-      duty = 0.55;
-    }
+    // if (duty <= 0.55 && duty != 0){
+    //   duty = 0.55;
+    // }
     
     if(dir == HIGH){
       ledcWrite(PIN_PWM_A, 0);
@@ -262,71 +254,26 @@ void setup() {
    ------------------------------------------------------------ */
 void loop() {
 unsigned long now_us = micros();
-if (now_us - last_time_us < (unsigned long)(Ts * 1e6)) return;
+unsigned long deltatime = now_us - last_time_us;
+if (deltatime < (unsigned long)(Ts * 1e6)) return;
 last_time_us = now_us;
+float dt = deltatime * 1e-6;
 
 /* --- 1. Read encoders --- */
 float x   = getXPositionCm() * 0.01f;
-float dx = (x-xprev)/Ts;
+float dx = (x-xprev)/dt;
 xprev = x;
 float phi = deg2rad(getAngleDeg());
-float dphi = (phi-phiprev)/Ts;
+float dphi = (phi-phiprev)/dt;
 phiprev = phi;
 
 float state[4] = { x, dx, phi, dphi };
-
-//float y[2] = { x, phi };
-
-// /* --- 2. Observer update (DISCRETE) --- */
-
-// // y_hat = C*x_hat
-// float y_hat[2] = {0,0};
-// for (int i = 0; i < 2; i++)
-//   for (int j = 0; j < 4; j++)
-//     y_hat[i] += C_mat[i][j] * x_hat[j];
-
-// // innovation e = y - y_hat
-// float e[2] = { y[0] - y_hat[0], y[1] - y_hat[1] };
-
-// // compute x_hat_next = A*x_hat + B*u_prev + L*e
-// float x_hat_new[4];
-
-// for (int i = 0; i < 4; i++)
-// {
-//     x_hat_new[i] = 0;
-
-//     for (int j = 0; j < 4; j++)
-//         x_hat_new[i] += A_mat[i][j] * x_hat[j];
-
-//     x_hat_new[i] += B_mat[i] * u_prev;
-//     x_hat_new[i] += L[i][0]*e[0] + L[i][1]*e[1];
-// }
-
-// // update state estimate
-// for (int i = 0; i < 4; i++)
-//     x_hat[i] = x_hat_new[i];
-
-// /* --- 3. LQR Control --- */
-
-// float err[4] = {
-//   x_hat[0],
-//   x_hat[1],
-//   x_hat[2],
-//   x_hat[3]
-// };
 
 float u = 0;
 for(int i = 0; i < 4; i++)
   u -= K[i] * state[i];
 
-/* scale for motor */
-// if (x > 0.13f)    u -= 5.0f*(x - 0.13);
-// if (x < -0.13f)   u -= 5.0f*(x + 0.13f);
-
-float u_norm = u * 0.75f;
-
-// store PREVIOUS CONTROL INPUT = u , NOT pwm!
-u_prev = u;
+float u_norm = u * 0.4f;
 
 // send to motor
 setMotor(u_norm);
@@ -338,5 +285,4 @@ Serial.print("  phi=");
 Serial.print(phi);
 Serial.print("  u=");
 Serial.println(u_norm);
-
 }
