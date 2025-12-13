@@ -1,6 +1,6 @@
 clear; clc;
 
-%% params
+%% 1. Parameters
 Ts = 0.005;  
 M = 0.139;   % Mass Cart (kg)
 m = 0.0315;  % Mass Pendulum (kg)
@@ -8,10 +8,10 @@ b = 0.1;     % Friction
 L = 0.3;     % Length (m)
 g = 9.81;
 
-l = L/2;     % centre of mass
-I = (1/12) * m * L^2; % Inertia
+l = L/2;     % Center of Mass
+I = (1/12) * m * L^2; % Inertia about CoM
 
-%% Linearized System
+%% 2. System Matrices (Linearized)
 p = I*(M+m) + M*m*l^2; 
 
 A = [0      1              0           0;
@@ -33,7 +33,7 @@ D = [0; 0];
 sys_ss = ss(A,B,C,D);
 sysd = c2d(sys_ss, Ts, 'zoh');
 
-%% LQR
+%% 3. LQR Control
 % Q = diag([x, x_dot, phi, phi_dot])
 Q = diag([300, 1, 1200, 1]); 
 R = 0.1; 
